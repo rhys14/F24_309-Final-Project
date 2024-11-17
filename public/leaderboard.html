@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>Leaderboard</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="styles/style.css">
+        <script src="https://unpkg.com/react/umd/react.development.js"></script>
+        <script src="https://unpkg.com/react-dom/umd/react-dom.development.js"></script>
+        <script src="https://unpkg.com/babel-standalone@6.26.0/babel.js"></script>
+    </head>
+    <body class="main">
+        <h1>LEADER BOARD</h1>
+        <div id="leaderboard-app"></div>
+        <form action="play.html">
+            <input type="submit" class="button" value="RETURN">
+        </form>
+        <script type="text/babel">
+            const { useState, useEffect } = React;
+
+            function LeaderboardApp() {
+                const [view, setView] = useState("global");
+
+                return (
+                    <div>
+                        <button onClick={() => setView("global")} className="toggle-button">
+                            Global
+                        </button>
+                        <button onClick={() => setView("personal")} className="toggle-button">
+                            Personal
+                        </button>
+
+                        <table id="lb-react" className="leaderboard-base">
+                            {view === "global" ? <Global /> : <Personal />}
+                        </table>
+                    </div>
+                );
+            }
+
+            function Global() {
+                const [leaderboardData, setLeaderboardData] = useState([]);
+
+                async function getGlobal() {
+                    const request = new Request("getGlobalLeaderboard", {
+                        method: "GET",
+                        headers: { 'Content-Type': "application/json" }
+                    });
+
+                    const response = await fetch(request);
+                    const data = await response.json();
+                    //Github helped me here
+                    //ChatGPT also helped here
+                    const sortedData = Object.entries(data)
+                        .map(([name, [score, , time]]) => ({ name, score, time }))
+                        .sort((a, b) => 
+                            b.score - a.score || a.time - b.time
+                        );
+
+                    setLeaderboardData(sortedData);
+                }
+
+                useEffect(() => {
+                    getGlobal();
+                }, []);
+
+                return (
+                    <tbody>
+                        <tr>
+                            <td colSpan="3" className="header">Global Bests</td>
+                        </tr>
+                        <tr>
+                            <td className="header">Names</td>
+                            <td className="header">Scores</td>
+                            <td className="header">Time</td>
+                        </tr>
+                        {leaderboardData.map((entry, index) => (
+                            <tr key={index}>
+                                <td className="name">{entry.name}</td>
+                                <td className="scores">{entry.score}</td>
+                                <td className="times">{entry.time}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                );
+            }
+
+    function Personal() {
+        const [leaderboardData, setLeaderboardData] = useState([]);
+        const [username, setUsername] = useState(localStorage.getItem("username"))
+
+        async function getPersonal() {
+            const data = {
+                username: username
+            };
+
+            const response = await fetch("/getPersonalLeaderboard", {
+                method: "POST",
+                headers: { 'Content-Type': "application/json" },
+                body: JSON.stringify(data)
+            });
+
+            const playerData = await response.json();
+            const userScores = playerData[data.username] || []; 
+
+            // Format and sort the data
+            //Github helped me sort data here
+            //ChatGPT also helped here
+            const sortedData = userScores
+                .map(([score, , time]) => ({ score, time }))
+                .sort((a, b) => b.score - a.score || a.time - b.time);
+            setLeaderboardData(sortedData);
+        }
+
+            useEffect(() => {
+                getPersonal();
+            }, []);
+
+            return (
+                <tbody>
+                    <tr>
+                        <td colSpan="2" className="header">{username} Personal Bests</td>
+                    </tr>
+                    <tr>
+                        <td className="header">Scores</td>
+                        <td className="header">Time</td>
+                    </tr>
+                    
+                    {leaderboardData.map((entry, index) => (
+                        <tr key={index}>
+                            <td className="scores">{entry.score}</td>
+                            <td className="times">{entry.time}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            );
+    }
+            ReactDOM.render(<LeaderboardApp />, document.getElementById("leaderboard-app"));
+        </script>
+    </body>
+</html>

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta
+      name="description"
+      content="Web site created using create-react-app"
+    />
+  </head>
+  <script href="/src/index.js"></script>
+
+<form action="imagesTemp" method="post" enctype="multipart/form-data" id="form"> 
+    <div id="grid">
+        <div>
+        <label for="upload">Select an image to uplaod:</label>
+        <input type="file" id="file" name="file" required>
+        </div>
+        <div>
+        <label for="caption">Caption:</label>
+        <input type = "text" id = "caption" name="caption" required>
+        </div>
+        <div>
+        <input type = "submit">
+        </div>
+        <div id="root">
+            <!--React should place here-->
+        </div>
+        <script type="module" src="/public/scripts/index.js"></script>
+    </div>
+</form>
+</html>

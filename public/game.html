@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>City Guesser</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="styles/style.css">
+        
+        
+        <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+        <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+        <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    </head>
+    <body>
+       
+        <div id="game-div"><!--React valuables go here--></div>
+
+       
+        <script type="text/babel">
+
+            // NOTE: use only async funcs and no let initializations
+            //for some reason react just dies and breaks when you use them
+            const { useState, useEffect, useRef } = React;
+            function App() {
+                //get photo from server
+                async function getInfo() {
+                    const request = new Request("/images", {
+                        method: "GET",
+                        headers: {
+                            'Content-Type': "application/json"
+                        }
+                    });
+
+                    const response = await fetch(request);
+                    
+                    const data = await response.json()
+                    console.log(data)
+                    data["file"] = "gameImages/" + data["file"]
+                    return data
+                }
+                const isSentRef = useRef(false);
+                //scores 0 is amount correct scores 1 is total answered
+                async function sendScore(score , timer) {
+                    if(!isSentRef.current) {
+                        isSentRef.current = true
+                        const data = {}
+                        data["username"] = localStorage.getItem("username");
+                        data["correct"] = score[0]
+                        data["total"] = score[1]
+                        data["timer"] = timer
+                        const response = await fetch("/sendScores", {
+                            method: "POST", 
+                            headers: {
+                                'Content-Type': "application/json"
+                            },
+                            body: JSON.stringify(data)
+                        });
+
+                        if(!response.ok) {
+                            throw new Error(`Server responded with status: ${response.status} ${response.statusText}`);
+                            return;
+                        } 
+                        console.log("We Good")
+
+                    }
+                    
+                }
+
+                const [currentCity, setCurrentCity] = useState(''); //used for current photo
+                const [guess, setGuess] = useState(''); //used for text box
+                const [message, setMessage] = useState(''); //used for response message
+                const [inputDisabled, setInputDisabled] = useState(false); //disables buttons for less errors
+                const [score, setScore] = useState([0,0]) //creates scores on screen
+                const [timer, setTime] = useState(0) //creates timer for amount of time taken
+
+
+                //this sets the photo every time
+                useEffect(() => {
+                    async function fetchData() {
+                        const cityInfo = await getInfo();
+                        setCurrentCity(cityInfo);
+                    }
+                    fetchData();
+                }, []);
+
+                //handles button press here rather than server, i like it better this way :)
+                async function handleSubmit(event) {
+                    event.preventDefault();
+                    setInputDisabled(true);
+                    if (guess.toLowerCase() === currentCity.caption.toLowerCase()) {
+                        setMessage("Correct!");
+                        setScore([score[0]+1, score[1]+1]);
+                    } else {
+                        setMessage("Incorrect!");
+                        setScore([score[0], score[1]+1]);
+                    }
+
+                    
+                    setGuess(''); 
+
+                    //timer delay created here and disables here
+                    setTimeout(async () => {
+                        const newCityInfo = await getInfo();
+                        if (newCityInfo) {
+                            setCurrentCity(newCityInfo);
+                            setMessage(''); 
+                        }
+                        setInputDisabled(false); 
+                    }, 1500); 
+                }
+
+                setTimeout(async () => {
+                    if(score[1] < 7){
+                        setTime(timer +1) 
+                    }
+                }, 1000)
+                if(score[1] < 7){
+                    //game screen
+                    return (
+                        <div>
+                            <h1>City Guesser</h1>
+                            <div class="game-images">
+                                <img src={currentCity.file} alt="City view" />
+                            </div>
+                            <form onSubmit={handleSubmit}>
+                                <input type="text" class="text-input" placeholder="Guess Here" required
+                                    value={guess} onChange={(inputtedText) => setGuess(inputtedText.target.value)}
+                                    disabled={inputDisabled} // Disable the input when necessary - github helped here
+                                /><br />
+                                <button type="submit" class="button" disabled={inputDisabled}>ENTER</button> 
+                            </form>
+                            <h2 class="game-eval">{message}</h2>
+                            <h2 class="game-eval">{score[0]} out of {score[1]}</h2>
+                            <h2 class="game-eval">Time: {timer}</h2>
+                            <form action="play.html">
+                                <button type="submit" class="button" disabled={inputDisabled}>RETURN</button> 
+                            </form>
+                        </div>
+                        );
+                    }else{
+                        sendScore(score, timer)
+                        //win screen
+                        return(
+                        <div>
+                            <h2 class="game-eval">Final Score: {score[0]} / {score[1]}</h2>
+                            <h2 class="game-eval">Time: {timer}</h2>
+                            <form action="play.html">
+                                <button type="submit" class="button">RETURN</button>
+                            </form>
+                        </div>
+
+                        );
+                    }
+            }
+            
+            ReactDOM.render(<App />, document.getElementById('game-div'));
+        </script>
+    </body>
+</html>
